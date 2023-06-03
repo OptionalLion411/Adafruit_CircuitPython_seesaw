@@ -12,10 +12,18 @@ import struct
 from adafruit_pixelbuf import PixelBuf
 
 try:
+    from typing import Any, Optional, Union
+
+    from seesaw import Seesaw
+except ImportError:
+    pass
+
+
+try:
     from micropython import const
 except ImportError:
 
-    def const(x):
+    def const(x: Any) -> Any:
         return x
 
 
@@ -65,14 +73,14 @@ class NeoPixel(PixelBuf):
 
     def __init__(
         self,
-        seesaw,
-        pin,
-        n,
+        seesaw: Seesaw,
+        pin: int,
+        n: int,
         *,
-        bpp=None,
-        brightness=1.0,
-        auto_write=True,
-        pixel_order="GRB"
+        bpp: Optional[int] = None,
+        brightness: float = 1.0,
+        auto_write: bool = True,
+        pixel_order: Union[str, tuple] = "GRB"
     ):
         self._seesaw = seesaw
         self._pin = pin
@@ -107,5 +115,5 @@ class NeoPixel(PixelBuf):
 
         self._seesaw.write(_NEOPIXEL_BASE, _NEOPIXEL_SHOW)
 
-    def deinit(self):
+    def deinit(self) -> None:
         pass

@@ -10,10 +10,16 @@
 """
 
 try:
+    from typing import Any
+except ImportError:
+    pass
+
+
+try:
     from micropython import const
 except ImportError:
 
-    def const(x):
+    def const(x: Any) -> Any:
         return x
 
 

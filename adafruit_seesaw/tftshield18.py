@@ -13,10 +13,18 @@ from collections import namedtuple
 import board
 
 try:
+    from typing import Any, Optional
+
+    from busio import I2C
+except ImportError:
+    pass
+
+
+try:
     from micropython import const
 except ImportError:
 
-    def const(x):
+    def const(x: Any) -> Any:
         return x
 
 
@@ -65,7 +73,7 @@ class TFTShield18(Seesaw):
         # TypeError: unsupported operand type(s) for <<: 'int' and '_MockObject'
         _button_mask = 0xFF
 
-    def __init__(self, i2c_bus=None, addr=0x2E):
+    def __init__(self, i2c_bus: Optional[I2C] = None, addr: int = 0x2E):
         if i2c_bus is None:
             try:
                 i2c_bus = board.I2C()
@@ -75,7 +83,7 @@ class TFTShield18(Seesaw):
         self.pin_mode(_TFTSHIELD_RESET_PIN, self.OUTPUT)
         self.pin_mode_bulk(self._button_mask, self.INPUT_PULLUP)
 
-    def set_backlight(self, value):
+    def set_backlight(self, value: bool) -> None:
         """
         Set the backlight on
         """
@@ -84,7 +92,7 @@ class TFTShield18(Seesaw):
         command = self._BACKLIGHT_ON if value else self._BACKLIGHT_OFF
         self.write(_TIMER_BASE, _TIMER_PWM, b"\x00" + command)
 
-    def set_backlight_freq(self, freq):
+    def set_backlight_freq(self, freq: int) -> None:
         """
         Set the backlight frequency of the TFT Display
         """
@@ -93,14 +101,14 @@ class TFTShield18(Seesaw):
         value = b"\x00" + bytearray((freq >> 8) & 0xFF, freq & 0xFF)
         self.write(_TIMER_BASE, _TIMER_FREQ, value)
 
-    def tft_reset(self, rst=True):
+    def tft_reset(self, rst: bool = True) -> None:
         """
         Reset the TFT Display
         """
         self.digital_write(_TFTSHIELD_RESET_PIN, rst)
 
     @property
-    def buttons(self):
+    def buttons(self) -> Buttons:
         """
         Return a set of buttons with current push values
         """

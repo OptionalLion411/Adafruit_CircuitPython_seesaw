@@ -10,6 +10,11 @@
 ====================================================
 """
 
+try:
+    from seesaw import Seesaw
+except ImportError:
+    pass
+
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_seesaw.git"
 
@@ -18,18 +23,18 @@ class IncrementalEncoder:
     """IncrementalEncoder determines the relative rotational position based
     on two series of pulses."""
 
-    def __init__(self, seesaw, encoder=0):
+    def __init__(self, seesaw: Seesaw, encoder: int = 0):
         """Create an IncrementalEncoder object associated with the given
         eesaw device."""
         self._seesaw = seesaw
         self._encoder = encoder
 
     @property
-    def position(self):
+    def position(self) -> int:
         """The current position in terms of pulses. The number of pulses per
         rotation is defined by the specific hardware."""
         return self._seesaw.encoder_position(self._encoder)
 
     @position.setter
-    def position(self, value):
+    def position(self, value: int) -> None:
         self._seesaw.set_encoder_position(value, self._encoder)

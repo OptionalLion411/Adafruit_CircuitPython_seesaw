@@ -33,10 +33,19 @@ import struct
 import time
 
 try:
+    from typing import Any, Optional
+except ImportError:
+    pass
+
+
+try:
     from micropython import const
+
+    from busio import I2C
+    from digitalio import DigitalInOut
 except ImportError:
 
-    def const(x):
+    def const(x: Any) -> Any:
         return x
 
 
@@ -134,7 +143,13 @@ class Seesaw:
     INPUT_PULLUP = const(0x02)
     INPUT_PULLDOWN = const(0x03)
 
-    def __init__(self, i2c_bus, addr=0x49, drdy=None, reset=True):
+    def __init__(
+        self,
+        i2c_bus: I2C,
+        addr: int = 0x49,
+        drdy: Optional[DigitalInOut] = None,
+        reset: bool = True,
+    ):
         self._drdy = drdy
         if drdy is not None:
             drdy.switch_to_input()
@@ -177,46 +192,46 @@ class Seesaw:
             self.pin_mapping = ATtiny8x7_Pinmap
         # pylint: enable=import-outside-toplevel
 
-    def sw_reset(self, post_reset_delay=0.5):
+    def sw_reset(self, post_reset_delay: float = 0.5) -> None:
         """Trigger a software reset of the SeeSaw chip"""
         self.write8(_STATUS_BASE, _STATUS_SWRST, 0xFF)
         time.sleep(post_reset_delay)
 
-    def get_options(self):
+    def get_options(self) -> int:
         """Retrieve the 'options' word from the SeeSaw board"""
         buf = bytearray(4)
         self.read(_STATUS_BASE, _STATUS_OPTIONS, buf)
         ret = struct.unpack(">I", buf)[0]
         return ret
 
-    def get_version(self):
+    def get_version(self) -> int:
         """Retrieve the 'version' word from the SeeSaw board"""
         buf = bytearray(4)
         self.read(_STATUS_BASE, _STATUS_VERSION, buf)
         ret = struct.unpack(">I", buf)[0]
         return ret
 
-    def pin_mode(self, pin, mode):
+    def pin_mode(self, pin: int, mode: int) -> None:
         """Set the mode of a pin by number"""
         if pin >= 32:
             self.pin_mode_bulk_b(1 << (pin - 32), mode)
         else:
             self.pin_mode_bulk(1 << pin, mode)
 
-    def digital_write(self, pin, value):
+    def digital_write(self, pin: int, value: int) -> None:
         """Set the value of an output pin by number"""
         if pin >= 32:
             self.digital_write_bulk_b(1 << (pin - 32), value)
         else:
             self.digital_write_bulk(1 << pin, value)
 
-    def digital_read(self, pin):
+    def digital_read(self, pin: int) -> bool:
         """Get the value of an input pin by number"""
         if pin >= 32:
             return self.digital_read_bulk_b((1 << (pin - 32))) != 0
         return self.digital_read_bulk((1 << pin)) != 0
 
-    def digital_read_bulk(self, pins, delay=0.008):
+    def digital_read_bulk(self, pins: int, delay: float = 0.008) -> int:
         """Get the values of all the pins on the 'A' port as a bitmask"""
         buf = bytearray(4)
         self.read(_GPIO_BASE, _GPIO_BULK, buf, delay=delay)
@@ -227,14 +242,14 @@ class Seesaw:
             ret = struct.unpack(">I", buf)[0]
         return ret & pins
 
-    def digital_read_bulk_b(self, pins, delay=0.008):
+    def digital_read_bulk_b(self, pins: int, delay: float = 0.008) -> int:
         """Get the values of all the pins on the 'B' port as a bitmask"""
         buf = bytearray(8)
         self.read(_GPIO_BASE, _GPIO_BULK, buf, delay=delay)
         ret = struct.unpack(">I", buf[4:])[0]
         return ret & pins
 
-    def set_GPIO_interrupts(self, pins, enabled):
+    def set_GPIO_interrupts(self, pins: int, enabled: bool) -> None:
         """Enable or disable the GPIO interrupt"""
         cmd = struct.pack(">I", pins)
         if enabled:
@@ -242,13 +257,13 @@ class Seesaw:
         else:
             self.write(_GPIO_BASE, _GPIO_INTENCLR, cmd)
 
-    def get_GPIO_interrupt_flag(self, delay=0.008):
+    def get_GPIO_interrupt_flag(self, delay: float = 0.008) -> int:
         """Read and clear GPIO interrupts that have fired"""
         buf = bytearray(4)
         self.read(_GPIO_BASE, _GPIO_INTFLAG, buf, delay=delay)
         return struct.unpack(">I", buf)[0]
 
-    def analog_read(self, pin, delay=0.008):
+    def analog_read(self, pin: int, delay: float = 0.008) -> int:
         """Read the value of an analog pin by number"""
         buf = bytearray(2)
         if pin not in self.pin_mapping.analog_pins:
@@ -263,7 +278,7 @@ class Seesaw:
         ret = struct.unpack(">H", buf)[0]
         return ret
 
-    def touch_read(self, pin):
+    def touch_read(self, pin: int) -> int:
         """Read the value of a touch pin by number"""
         buf = bytearray(2)
 
@@ -278,7 +293,7 @@ class Seesaw:
         ret = struct.unpack(">H", buf)[0]
         return ret
 
-    def moisture_read(self):
+    def moisture_read(self) -> int:
         """Read the value of the moisture sensor"""
         buf = bytearray(2)
 
@@ -298,7 +313,9 @@ class Seesaw:
 
         return ret
 
-    def _pin_mode_bulk_x(self, capacity, offset, pins, mode):
+    def _pin_mode_bulk_x(
+        self, capacity: int, offset: int, pins: int, mode: int
+    ) -> None:
         cmd = bytearray(capacity)
         cmd[offset:] = struct.pack(">I", pins)
         if mode == self.OUTPUT:
@@ -320,15 +337,15 @@ class Seesaw:
         else:
             raise ValueError("Invalid pin mode")
 
-    def pin_mode_bulk(self, pins, mode):
+    def pin_mode_bulk(self, pins: int, mode: int) -> None:
         """Set the mode of all the pins on the 'A' port as a bitmask"""
         self._pin_mode_bulk_x(4, 0, pins, mode)
 
-    def pin_mode_bulk_b(self, pins, mode):
+    def pin_mode_bulk_b(self, pins: int, mode: int) -> None:
         """Set the mode of all the pins on the 'B' port as a bitmask"""
         self._pin_mode_bulk_x(8, 4, pins, mode)
 
-    def digital_write_bulk(self, pins, value):
+    def digital_write_bulk(self, pins: int, value: int) -> None:
         """Set the mode of pins on the 'A' port as a bitmask"""
         cmd = struct.pack(">I", pins)
         if value:
@@ -336,7 +353,7 @@ class Seesaw:
         else:
             self.write(_GPIO_BASE, _GPIO_BULK_CLR, cmd)
 
-    def digital_write_bulk_b(self, pins, value):
+    def digital_write_bulk_b(self, pins: int, value: int) -> None:
         """Set the mode of pins on the 'B' port as a bitmask"""
         cmd = bytearray(8)
         cmd[4:] = struct.pack(">I", pins)
@@ -345,7 +362,7 @@ class Seesaw:
         else:
             self.write(_GPIO_BASE, _GPIO_BULK_CLR, cmd)
 
-    def analog_write(self, pin, value):
+    def analog_write(self, pin: int, value: int) -> None:
         """Set the value of an analog output by number"""
         if pin not in self.pin_mapping.pwm_pins:
             raise ValueError("Invalid PWM pin")
@@ -363,7 +380,7 @@ class Seesaw:
         self.write(_TIMER_BASE, _TIMER_PWM, cmd)
         time.sleep(0.001)
 
-    def get_temp(self):
+    def get_temp(self) -> float:
         """Read the temperature"""
         buf = bytearray(4)
         self.read(_STATUS_BASE, _STATUS_TEMP, buf, 0.005)
@@ -371,7 +388,7 @@ class Seesaw:
         ret = struct.unpack(">I", buf)[0]
         return 0.00001525878 * ret
 
-    def set_pwm_freq(self, pin, freq):
+    def set_pwm_freq(self, pin: int, freq: int) -> None:
         """Set the PWM frequency of a pin by number"""
         if pin in self.pin_mapping.pwm_pins:
             cmd = bytearray(
@@ -381,28 +398,28 @@ class Seesaw:
         else:
             raise ValueError("Invalid PWM pin")
 
-    def encoder_position(self, encoder=0):
+    def encoder_position(self, encoder: int = 0) -> int:
         """The current position of the encoder"""
         buf = bytearray(4)
         self.read(_ENCODER_BASE, _ENCODER_POSITION + encoder, buf)
         return struct.unpack(">i", buf)[0]
 
-    def set_encoder_position(self, pos, encoder=0):
+    def set_encoder_position(self, pos: int, encoder: int = 0) -> None:
         """Set the current position of the encoder"""
         cmd = struct.pack(">i", pos)
         self.write(_ENCODER_BASE, _ENCODER_POSITION + encoder, cmd)
 
-    def encoder_delta(self, encoder=0):
+    def encoder_delta(self, encoder: int = 0) -> int:
         """The change in encoder position since it was last read"""
         buf = bytearray(4)
         self.read(_ENCODER_BASE, _ENCODER_DELTA + encoder, buf)
         return struct.unpack(">i", buf)[0]
 
-    def enable_encoder_interrupt(self, encoder=0):
+    def enable_encoder_interrupt(self, encoder: int = 0) -> None:
         """Enable the interrupt to fire when the encoder changes position"""
         self.write8(_ENCODER_BASE, _ENCODER_INTENSET + encoder, 0x01)
 
-    def disable_encoder_interrupt(self, encoder=0):
+    def disable_encoder_interrupt(self, encoder: int = 0) -> None:
         """Disable the interrupt from firing when the encoder changes"""
         self.write8(_ENCODER_BASE, _ENCODER_INTENCLR + encoder, 0x01)
 
@@ -422,45 +439,45 @@ class Seesaw:
     #
     #     return self.read8(SEESAW_SERCOM0_BASE + sercom, SEESAW_SERCOM_DATA)
 
-    def set_i2c_addr(self, addr):
+    def set_i2c_addr(self, addr: int) -> None:
         """Store a new address in the device's EEPROM and reboot it."""
         self.eeprom_write8(_EEPROM_I2C_ADDR, addr)
         time.sleep(0.250)
         self.i2c_device.device_address = addr
         self.sw_reset()
 
-    def get_i2c_addr(self):
+    def get_i2c_addr(self) -> int:
         """Return the device's I2C address stored in its EEPROM"""
         return self.read8(_EEPROM_BASE, _EEPROM_I2C_ADDR)
 
-    def eeprom_write8(self, addr, val):
+    def eeprom_write8(self, addr: int, val: int) -> None:
         """Write a single byte directly to the device's EEPROM"""
         self.eeprom_write(addr, bytearray([val]))
 
-    def eeprom_write(self, addr, buf):
+    def eeprom_write(self, addr: int, buf: bytes) -> None:
         """Write multiple bytes directly to the device's EEPROM"""
         self.write(_EEPROM_BASE, addr, buf)
 
-    def eeprom_read8(self, addr):
+    def eeprom_read8(self, addr: int) -> int:
         """Read a single byte directly to the device's EEPROM"""
         return self.read8(_EEPROM_BASE, addr)
 
-    def uart_set_baud(self, baud):
+    def uart_set_baud(self, baud: int) -> None:
         """Set the serial baudrate of the device"""
         cmd = struct.pack(">I", baud)
         self.write(_SERCOM0_BASE, _SERCOM_BAUD, cmd)
 
-    def write8(self, reg_base, reg, value):
+    def write8(self, reg_base: int, reg: int, value: int) -> None:
         """Write an arbitrary I2C byte register on the device"""
         self.write(reg_base, reg, bytearray([value]))
 
-    def read8(self, reg_base, reg):
+    def read8(self, reg_base: int, reg: int) -> int:
         """Read an arbitrary I2C byte register on the device"""
         ret = bytearray(1)
         self.read(reg_base, reg, ret)
         return ret[0]
 
-    def read(self, reg_base, reg, buf, delay=0.008):
+    def read(self, reg_base: int, reg: int, buf: bytes, delay: float = 0.008) -> None:
         """Read an arbitrary I2C register range on the device"""
         self.write(reg_base, reg)
         if self._drdy is not None:
@@ -471,7 +488,7 @@ class Seesaw:
         with self.i2c_device as i2c:
             i2c.readinto(buf)
 
-    def write(self, reg_base, reg, buf=None):
+    def write(self, reg_base: int, reg: int, buf: Optional[bytes] = None) -> None:
         """Write an arbitrary I2C register range on the device"""
         full_buffer = bytearray([reg_base, reg])
         if buf is not None:
